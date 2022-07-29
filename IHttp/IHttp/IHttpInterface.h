@@ -111,12 +111,17 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////
-//DLL的导出函数声明
-#ifdef _USRDLL//导出库
-#define LIB_FUNCTION extern "C" __declspec(dllexport)
-#else
-#define LIB_FUNCTION extern "C" __declspec(dllimport)
+#ifndef USE_SATIC
+  //DLL的导出函数声明
+  #ifdef _USRDLL//导出库
+  #define LIB_FUNCTION extern "C" __declspec(dllexport)
+  #else
+  #define LIB_FUNCTION extern "C" __declspec(dllimport)
+  #endif
+#else 
+#define LIB_FUNCTION
 #endif
+
 /***********************************************************
 *声明导出函数部分
 *
