@@ -61,7 +61,7 @@ class IHttpCallback
 {
 public:
 	virtual void	OnDownloadCallback(void* pParam, DownloadState state, double nTotalSize, double nLoadSize) = 0;
-	virtual bool	IsNeedStop() = 0;
+	virtual bool	IsNeedStop(void* pParam) = 0;
 };
 
 class IHttpBase

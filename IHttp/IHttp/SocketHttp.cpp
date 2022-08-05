@@ -99,7 +99,7 @@ bool CHttpSocket::DownloadFile(LPCWSTR lpUrl, LPCWSTR lpFilePath)
 		pBuffer = (BYTE*)malloc(READ_BUFFER_SIZE + 1);
 		do
 		{
-			if (m_paramsData.callback && m_paramsData.callback->IsNeedStop())
+			if (m_paramsData.callback && m_paramsData.callback->IsNeedStop(m_paramsData.lpparam))
 				throw HttpErrorUserCancel;
 			nRecvSize = recv(m_socket, (char*)pBuffer, READ_BUFFER_SIZE, 0);
 			if (SOCKET_ERROR == nRecvSize)

@@ -30,7 +30,7 @@ public:
 			printf("下载进度：%d%%\n", nPercent);
 		}
 	}
-	virtual bool IsNeedStop()
+	virtual bool IsNeedStop(void* Params)
 	{
 		//如果需要在外部终止下载，返回true
 		return false;//继续下载

@@ -124,6 +124,8 @@ bool CWinHttp::DownloadFile(LPCWSTR lpUrl, LPCWSTR lpFilePath)
 	void* lpBuff = malloc(READ_BUFFER_SIZE);
 	while (true)
 	{
+    if (m_paramsData.callback && m_paramsData.callback->IsNeedStop(m_paramsData.lpparam))
+      break;
 		if (dwBytesToRead > READ_BUFFER_SIZE)
 		{
 			free(lpBuff);
@@ -142,6 +144,10 @@ bool CWinHttp::DownloadFile(LPCWSTR lpUrl, LPCWSTR lpFilePath)
 		if (dwBytesToRead <= 0)
 		{
 			bRet = true;
+      //发送下载完成
+      if (m_paramsData.callback)
+        m_paramsData.callback->OnDownloadCallback(m_paramsData.lpparam, HttpFinished, dwFileSize, dwRecvSize);
+
 			break;
 		}
 	}
