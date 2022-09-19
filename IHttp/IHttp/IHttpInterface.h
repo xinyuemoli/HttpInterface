@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <string>
+#include <functional>
 using std::string;
 using std::wstring;
 
@@ -18,6 +19,7 @@ enum HttpRequest
 {
 	HttpGet = 0,
 	HttpPost,
+  HTTPHead
 };
 //枚举下载状态
 enum DownloadState
@@ -76,6 +78,18 @@ public:
 	virtual int GetResponseCode() = 0;// 获取HTTP服务器返回码
 };
 
+
+using COMMONCALLBACKTYPE = bool(void* pData, unsigned int curSize, unsigned int totalSize, void* userData);
+using COMMONCALLBACK = std::function<COMMONCALLBACKTYPE>;
+
+class IHttpBase2
+{
+public:
+  virtual bool  DownLoad(LPCWSTR lpUrl) = 0;
+  virtual void SetDownLoadCallBack(COMMONCALLBACKTYPE& callback, void* userData) = 0;
+  virtual void SetDownLoadCallBack(COMMONCALLBACK& callback, void* userData) = 0;
+};
+
 ////////////////////////////////////////////////////////////////////////////////////
 //HTTP请求接口类
 class IWininetHttp
@@ -101,7 +115,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////////////////
 //WinHttp类
 class IWinHttp
-	: public IWininetHttp
+	: public IWininetHttp,public IHttpBase2
 {
 public:
 	//设置超时时间，单位：毫秒

@@ -26,6 +26,7 @@ CWinHttp::CWinHttp(void)
 	, m_nRecvTimeout(5000)
 	, m_bHttps(false)
 	, m_nResponseCode(0)
+  , user_data_(nullptr)
 {
 	memset(&m_paramsData, 0, sizeof(HttpParamsData));
 	Init();
@@ -68,7 +69,20 @@ bool CWinHttp::ConnectHttpServer(LPCWSTR lpIP, WORD wPort)
 
 bool CWinHttp::CreateHttpRequest(LPCWSTR lpPage, HttpRequest type, DWORD dwFlag/*=0*/)
 {
-	wchar_t* pVerb = (type == HttpGet) ? L"GET" : L"POST";
+  wchar_t* pVerb = NULL;
+  if (type == HttpGet)
+  {
+    pVerb = L"GET";
+  }
+  else if (type == HttpPost)
+  {
+    pVerb = L"POST";
+  }
+  else if (type == HTTPHead)
+  {
+    pVerb = L"HEAD";
+  }
+
 	m_hRequest = ::WinHttpOpenRequest(
 		m_hConnect,
 		pVerb,
@@ -106,6 +120,7 @@ bool CWinHttp::DownloadFile(LPCWSTR lpUrl, LPCWSTR lpFilePath)
 		m_paramsData.errcode = HttpError404;
 		return false;
 	}
+
 	HANDLE hFile = CreateFile(lpFilePath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (INVALID_HANDLE_VALUE == hFile)
 	{
@@ -218,6 +233,82 @@ bool CWinHttp::DownloadToMem(LPCWSTR lpUrl, OUT void** ppBuffer, OUT int* nSize)
 	return bResult;
 }
 
+void CWinHttp::SetDownLoadCallBack(COMMONCALLBACKTYPE & callback, void * userData)
+{
+  download_callback_ = callback;
+  user_data_ = userData;
+}
+
+void CWinHttp::SetDownLoadCallBack(COMMONCALLBACK & callback, void * userData)
+{
+  download_callback_ = callback;
+  user_data_ = userData;
+}
+
+bool CWinHttp::DownLoad(LPCWSTR lpUrl)
+{
+  Release();
+  if (!Init())
+    return false;
+
+  DWORD dwFileSize = 0, dwBytesToRead = 0, dwReadSize=0;
+
+  if (!InitConnect(lpUrl, HttpGet))
+    return false;
+  if (!QueryContentLength(dwFileSize))
+  {
+    m_paramsData.errcode = HttpErrorQuery;
+    return false;
+  }
+
+  m_nResponseCode = QueryStatusCode();
+  if (m_nResponseCode == HTTP_STATUS_NOT_FOUND)
+  {
+    m_paramsData.errcode = HttpError404;
+    return false;
+  }
+
+  //查询是否可读
+  if (!::WinHttpQueryDataAvailable(m_hRequest, &dwBytesToRead))
+  {
+    return false;
+  }
+
+  void* lpBuff = malloc(READ_BUFFER_SIZE);
+  bool bSuc = false;
+  while (true)
+  {
+    if (dwBytesToRead > READ_BUFFER_SIZE)
+    {
+      free(lpBuff);
+      lpBuff = malloc(dwBytesToRead);
+    }
+    if (!::WinHttpReadData(m_hRequest, lpBuff, dwBytesToRead, &dwReadSize))
+      break;
+    
+    //交给调用放处理
+    if (download_callback_)
+    {
+      if (!download_callback_(lpBuff, dwReadSize, dwFileSize, user_data_))
+      {
+        bSuc = true;
+        break;
+      }
+    }
+
+    if (!::WinHttpQueryDataAvailable(m_hRequest, &dwBytesToRead))
+      break;
+    if (dwBytesToRead <= 0)
+    {
+      bSuc = true;
+      break;
+    }
+  }
+  free(lpBuff);
+
+  return true;
+}
+
 void CWinHttp::SetDownloadCallback(IHttpCallback* pCallback, void* pParam)
 {
 	m_paramsData.callback = pCallback;
@@ -281,6 +372,42 @@ string CWinHttp::Request(LPCWSTR lpUrl, HttpRequest type, LPCSTR lpPostData /*= 
 	DWORD dwBytesToRead, dwReadSize;
 	void* lpBuff = malloc(READ_BUFFER_SIZE);
 	bool bFinish = false;
+
+  if (type == HTTPHead)
+  {
+    DWORD dwSize = 0;
+    LPVOID lpOutBuffer = NULL;
+    BOOL  bResults = FALSE;
+    WinHttpQueryHeaders(m_hRequest, WINHTTP_QUERY_RAW_HEADERS_CRLF,
+      WINHTTP_HEADER_NAME_BY_INDEX, NULL,
+      &dwSize, WINHTTP_NO_HEADER_INDEX);
+
+    // Allocate memory for the buffer.
+    if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+    {
+      lpOutBuffer = new WCHAR[dwSize / sizeof(WCHAR)];
+
+      // Now, use WinHttpQueryHeaders to retrieve the header.
+      bResults = WinHttpQueryHeaders(m_hRequest,
+        WINHTTP_QUERY_RAW_HEADERS_CRLF,
+        WINHTTP_HEADER_NAME_BY_INDEX,
+        lpOutBuffer, &dwSize,
+        WINHTTP_NO_HEADER_INDEX);
+     
+      if (bResults)
+      {
+        //宽字节转窄字节
+        std::wstring wstrHeaders = (wchar_t*)lpOutBuffer;
+        
+        strRet = U2A(wstrHeaders);
+      }
+
+      wchar_t* pBuffer = (wchar_t*)lpOutBuffer;
+      delete []pBuffer;
+    }
+
+    return strRet;
+  }
 	while (true)
 	{
 		if (!::WinHttpQueryDataAvailable(m_hRequest, &dwBytesToRead))
