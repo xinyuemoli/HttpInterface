@@ -306,7 +306,7 @@ bool CWinHttp::DownLoad(LPCWSTR lpUrl)
   }
   free(lpBuff);
 
-  return true;
+  return bSuc;
 }
 
 void CWinHttp::SetDownloadCallback(IHttpCallback* pCallback, void* pParam)
@@ -524,10 +524,16 @@ bool CWinHttp::SendHttpRequest(LPCSTR lpPostData/*=NULL*/, LPCWSTR lpHeader/*=NU
 {
 	//Ìí¼ÓHTTPÍ·
 	std::wstring header = A2U(m_header.toHttpHeaders());
+  /*if (lpHeader != NULL)
+  {
+    header += lpHeader;
+  }*/
 	::WinHttpAddRequestHeaders(m_hRequest, header.c_str(), header.size(), WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE);
 	DWORD dwSize = (NULL == lpPostData) ? 0 : strlen(lpPostData);
 	if (lpHeader == NULL)
 		return ::WinHttpSendRequest(m_hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)lpPostData, dwSize, dwSize, NULL) == TRUE;
-	return ::WinHttpSendRequest(m_hRequest, lpHeader, -1L, (LPVOID)lpPostData, dwSize, dwSize, NULL) == TRUE;
+  return ::WinHttpSendRequest(m_hRequest, lpHeader, -1L, (LPVOID)lpPostData, dwSize, dwSize, NULL) == TRUE;
+
+  //return ::WinHttpSendRequest(m_hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)lpPostData, dwSize, dwSize, NULL) == TRUE;
 }
 
