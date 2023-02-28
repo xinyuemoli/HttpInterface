@@ -5,7 +5,18 @@
 #include <assert.h>
 #include "../Common.h"
 
-
+void CALLBACK AsyncStatusChangedCallback(HINTERNET hInternet,
+  DWORD_PTR dwContext,
+  DWORD dwInternetStatus,
+  LPVOID lpvStatusInformation,
+  DWORD dwStatusInformationLength)
+{
+  if (dwContext) 
+  {
+    CWinHttp* pThis = (CWinHttp*)dwContext;
+    pThis->AsyncCallback(dwInternetStatus, lpvStatusInformation, dwStatusInformationLength);
+  }
+}
 
 inline void CloseInternetHandle(HINTERNET* hInternet)
 {
@@ -37,6 +48,29 @@ CWinHttp::~CWinHttp(void)
 	Release();
 }
 
+void CWinHttp::AsyncCallback(DWORD dwInternetStatus, LPVOID lpvStatusInformation, DWORD dwStatusInformationLength)
+{
+  if (status_changed_callback_)
+  {
+    if (dwInternetStatus == WINHTTP_CALLBACK_STATUS_REDIRECT)
+    {
+      status_changed_callback_(dwInternetStatus, lpvStatusInformation, dwStatusInformationLength, status_changed_user_data_);
+    }
+  }
+}
+
+void CWinHttp::SetStatusChangedCallback(STATUSCHANGEDCALLBACKTYPE & callback, void * userData)
+{
+  status_changed_callback_ = callback;
+  status_changed_user_data_ = userData;
+}
+
+void CWinHttp::SetStatusChangedCallback(STATUSCHANGEDCALLBACK & callback, void * userData)
+{
+  status_changed_callback_ = callback;
+  status_changed_user_data_ = userData;
+}
+
 bool CWinHttp::Init()
 {
 	m_hInternet = ::WinHttpOpen(
@@ -50,6 +84,8 @@ bool CWinHttp::Init()
 		m_paramsData.errcode = HttpErrorInit;
 		return false;
 	}
+  //…Ë÷√◊¥Ã¨option
+  SetStatusOption();
 	::WinHttpSetTimeouts(m_hInternet, 0, m_nConnTimeout, m_nSendTimeout, m_nRecvTimeout);
 	return true;
 }
@@ -244,7 +280,6 @@ void CWinHttp::SetDownLoadCallBack(COMMONCALLBACK & callback, void * userData)
   download_callback_ = callback;
   user_data_ = userData;
 }
-
 bool CWinHttp::DownLoad(LPCWSTR lpUrl)
 {
   Release();
@@ -465,6 +500,20 @@ bool CWinHttp::QueryContentLength(OUT DWORD& dwLength)
 	return bRet;
 }
 
+bool CWinHttp::QueryContentDescription(OUT std::wstring & contentDes)
+{
+  bool bRet = false;
+  TCHAR szBuffer[1024] = { 0 };
+  DWORD dwSize = sizeof(szBuffer);
+  if (::WinHttpQueryHeaders(m_hRequest, WINHTTP_QUERY_CONTENT_DISPOSITION, WINHTTP_HEADER_NAME_BY_INDEX, szBuffer, &dwSize, WINHTTP_NO_HEADER_INDEX))
+  {
+    contentDes = szBuffer;
+    bRet = true;
+  }
+  return bRet;
+}
+
+
 int CWinHttp::QueryStatusCode()
 {
 	int http_code = 0;
@@ -475,6 +524,24 @@ int CWinHttp::QueryStatusCode()
 		http_code = wcstoul(szBuffer, &p, 10);
 	}
 	return http_code;
+}
+
+bool CWinHttp::SetStatusOption()
+{
+  if (m_hInternet)
+  {
+    DWORD content_value = (DWORD)this;
+    WinHttpSetOption(m_hInternet, WINHTTP_OPTION_CONTEXT_VALUE, &content_value, sizeof(DWORD));
+  }
+  else
+  {
+    return false;
+  }
+  WINHTTP_STATUS_CALLBACK isCallback = WinHttpSetStatusCallback(m_hInternet,
+    (WINHTTP_STATUS_CALLBACK)AsyncStatusChangedCallback,
+    WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS,
+    NULL);
+  return true;
 }
 
 bool CWinHttp::InitConnect(LPCWSTR lpUrl, HttpRequest type, LPCSTR lpPostData/*=NULL*/, LPCWSTR lpHeader/*=NULL*/)
@@ -512,11 +579,18 @@ bool CWinHttp::InitConnect(LPCWSTR lpUrl, HttpRequest type, LPCSTR lpPostData/*=
 		m_paramsData.errcode = HttpErrorSend;
 		return false;
 	}
+  
+
 	if (!WinHttpReceiveResponse(m_hRequest, NULL))
 	{
 		m_paramsData.errcode = HttpErrorInit;;
 		return false;
 	}
+  QueryContentDescription(m_Des_str);
+  if (status_changed_callback_)
+  {
+    status_changed_callback_(0x00800000, (LPVOID)m_Des_str.c_str(), m_Des_str.length(), status_changed_user_data_);
+  }
 	return true;
 }
 

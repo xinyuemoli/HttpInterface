@@ -18,6 +18,7 @@ public:
   //接受数据交给 调用方
   virtual void SetDownLoadCallBack(COMMONCALLBACKTYPE& callback,void* userData);
   virtual void SetDownLoadCallBack(COMMONCALLBACK& callback, void* userData);
+ 
   virtual bool  DownLoad(LPCWSTR lpUrl);
 
 	virtual void	SetDownloadCallback(IHttpCallback* pCallback, void* pParam);
@@ -25,6 +26,14 @@ public:
 	virtual void AddHeader(LPCSTR key, LPCSTR value);
 	virtual int GetResponseCode() { return m_nResponseCode; }
 
+  //设置回调
+  virtual void SetStatusChangedCallback(STATUSCHANGEDCALLBACKTYPE& callback, void* userData);
+  virtual void SetStatusChangedCallback(STATUSCHANGEDCALLBACK& callback, void* userData);
+
+  virtual void AsyncCallback(
+    DWORD dwInternetStatus,
+    LPVOID lpvStatusInformation,
+    DWORD dwStatusInformationLength);
 protected:
 	bool	Init();
 	void	Release();
@@ -36,10 +45,12 @@ protected:
 	//query 
 	bool	QueryRawHeaders(OUT wstring& strHeaders);
 	bool	QueryContentLength(OUT DWORD& dwLength);
+  bool  QueryContentDescription(OUT std::wstring & contentDes);
 	int  QueryStatusCode();
-
+  bool SetStatusOption();
 private:
 	int m_nResponseCode;
+  std::wstring m_Des_str;
 	bool		m_bHttps;
 	HINTERNET	m_hInternet;
 	HINTERNET	m_hConnect;
@@ -52,5 +63,8 @@ private:
 
   COMMONCALLBACK download_callback_;
   void* user_data_;
+
+  STATUSCHANGEDCALLBACK status_changed_callback_;
+  void* status_changed_user_data_;
 };
 

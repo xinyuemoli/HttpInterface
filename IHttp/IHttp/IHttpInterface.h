@@ -11,9 +11,11 @@
 #include <tchar.h>
 #include <string>
 #include <functional>
+
 using std::string;
 using std::wstring;
 
+#define WINHTTP_CALLBACK_STATUS_DES_FILENAME_CHANGE    WM_USER +1000;
 
 enum HttpRequest
 {
@@ -52,7 +54,8 @@ enum HttpInterfaceError
 	HttpErrorParam,				//参数错误，空指针，空字符……
 	HttpErrorWriteFile,			//写入文件失败
 	HttpErrorUnknow,			//未知错误
-
+	HttpInitStatus = 100, //自定义一个 初始化标识
+  	HttpCustomWaitRes, //自定义一个 等待资源标识
 };
 
 
@@ -82,12 +85,22 @@ public:
 using COMMONCALLBACKTYPE = bool(void* pData, unsigned int curSize, unsigned int totalSize, void* userData);
 using COMMONCALLBACK = std::function<COMMONCALLBACKTYPE>;
 
+using STATUSCHANGEDCALLBACKTYPE = void (CALLBACK)(
+  DWORD dwInternetStatus,
+  LPVOID lpvStatusInformation,
+  DWORD dwStatusInformationLength,
+  void* userData);
+
+using STATUSCHANGEDCALLBACK = std::function<STATUSCHANGEDCALLBACKTYPE>;
+
 class IHttpBase2
 {
 public:
   virtual bool  DownLoad(LPCWSTR lpUrl) = 0;
   virtual void SetDownLoadCallBack(COMMONCALLBACKTYPE& callback, void* userData) = 0;
   virtual void SetDownLoadCallBack(COMMONCALLBACK& callback, void* userData) = 0;
+  virtual void SetStatusChangedCallback(STATUSCHANGEDCALLBACKTYPE& callback, void* userData) = 0;
+  virtual void SetStatusChangedCallback(STATUSCHANGEDCALLBACK& callback, void* userData) = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////
