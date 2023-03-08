@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "../stdafx.h"
 #include "HttpClient.h"
 #include "Winhttp.h"
 #pragma comment(lib, "Winhttp")
@@ -11,7 +11,7 @@ void CALLBACK AsyncStatusChangedCallback(HINTERNET hInternet,
   LPVOID lpvStatusInformation,
   DWORD dwStatusInformationLength)
 {
-  if (dwContext) 
+  if (dwContext && WINHTTP_CALLBACK_STATUS_REDIRECT == dwInternetStatus)
   {
     CWinHttp* pThis = (CWinHttp*)dwContext;
     pThis->AsyncCallback(dwInternetStatus, lpvStatusInformation, dwStatusInformationLength);
@@ -38,6 +38,9 @@ CWinHttp::CWinHttp(void)
 	, m_bHttps(false)
 	, m_nResponseCode(0)
   , user_data_(nullptr)
+  , status_changed_callback_(nullptr)
+  , download_callback_(nullptr)
+  , status_changed_user_data_(nullptr)
 {
 	memset(&m_paramsData, 0, sizeof(HttpParamsData));
 	Init();
@@ -46,6 +49,9 @@ CWinHttp::CWinHttp(void)
 CWinHttp::~CWinHttp(void)
 {
 	Release();
+ /* wchar_t debug_info[MAX_PATH] = {};
+  swprintf_s(debug_info, L"~CWinHttp,this:%p\n", this);
+  OutputDebugString(debug_info);*/
 }
 
 void CWinHttp::AsyncCallback(DWORD dwInternetStatus, LPVOID lpvStatusInformation, DWORD dwStatusInformationLength)
@@ -538,7 +544,7 @@ bool CWinHttp::SetStatusOption()
     return false;
   }
   WINHTTP_STATUS_CALLBACK isCallback = WinHttpSetStatusCallback(m_hInternet,
-    (WINHTTP_STATUS_CALLBACK)AsyncStatusChangedCallback,
+    AsyncStatusChangedCallback,
     WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS,
     NULL);
   return true;
