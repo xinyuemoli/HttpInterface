@@ -4,6 +4,7 @@
 #include <Shlwapi.h>
 #include "define.h"
 #include "httpHeader.h"
+#include "utils.h"
 
 
 
@@ -35,7 +36,7 @@ bool CHttpSocket::InitSocket(const string& strHostName, const WORD sPort)
 			pHostent->h_addr_list[0][1] & 0x00ff,
 			pHostent->h_addr_list[0][2] & 0x00ff,
 			pHostent->h_addr_list[0][3] & 0x00ff);
-		m_strIpAddr = A2U(szIP);
+		m_strIpAddr = conversion::A2U(szIP);
 		if (INVALID_SOCKET != m_socket)
 			closesocket(m_socket);
 		//连接HTTP服务器
@@ -77,13 +78,13 @@ bool CHttpSocket::DownloadFile(LPCWSTR lpUrl, LPCWSTR lpFilePath)
 			//抱歉，socket方式暂时不支持HTTPS协议
 			return false;
 		}
-		string host = U2A(strHostName);
+		string host = conversion::U2A(strHostName);
 		if (!InitSocket(host, uPort))
 			throw L"";
 		m_header.setHost(host);
 		//这里可能会重定向回来
 	__request:
-		m_header.setRequestPath(U2A(strPage));
+		m_header.setRequestPath(conversion::U2A(strPage));
 		std::string strSend = m_header.toString(HttpGet);
 		int nRet = send(m_socket, strSend.c_str(), strSend.size(), 0);
 		if (SOCKET_ERROR == nRet)
@@ -122,7 +123,7 @@ bool CHttpSocket::DownloadFile(LPCWSTR lpUrl, LPCWSTR lpFilePath)
 					}
 					if (m_nResponseCode >300 && m_nResponseCode <400)//重定向
 					{
-						wstring strReLoadUrl = A2U(header.GetValue(HEADER_LOCATION));
+						wstring strReLoadUrl = conversion::A2U(header.GetValue(HEADER_LOCATION));
 						if (strReLoadUrl.find(L"http://") != 0)
 						{
 							strPage = strReLoadUrl;
@@ -217,13 +218,13 @@ bool CHttpSocket::DownloadToMem(LPCWSTR lpUrl, OUT void** ppBuffer, OUT int* nSi
 			//抱歉，socket方式暂时不支持HTTPS协议
 			return false;
 		}
-		string host = U2A(strHostName);
+		string host = conversion::U2A(strHostName);
 		if (!InitSocket(host, uPort))
 			throw HttpErrorInit;
 		m_header.setHost(host);
 		//这里可能会重定向回来
 	__request:
-		m_header.setRequestPath(U2A(strPage));
+		m_header.setRequestPath(conversion::U2A(strPage));
 		std::string strSend = m_header.toString(HttpGet);
 		int nRet = send(m_socket, strSend.c_str(), strSend.size(), 0);
 		if (SOCKET_ERROR == nRet)
@@ -254,7 +255,7 @@ bool CHttpSocket::DownloadToMem(LPCWSTR lpUrl, OUT void** ppBuffer, OUT int* nSi
 				}
 				if (m_nResponseCode >300 && m_nResponseCode <400)//重定向
 				{
-					wstring reloadUrl = A2U(header.GetValue(HEADER_LOCATION));
+					wstring reloadUrl = conversion::A2U(header.GetValue(HEADER_LOCATION));
 					if (reloadUrl.find(L"http://") != 0 && reloadUrl.find(L"https://") != 0)
 					{
 						strPage = reloadUrl;

@@ -4,6 +4,7 @@
 #pragma comment(lib, "Winhttp")
 #include <assert.h>
 #include "../Common.h"
+#include "../utils.h"
 
 void CALLBACK AsyncStatusChangedCallback(HINTERNET hInternet,
   DWORD_PTR dwContext,
@@ -367,8 +368,8 @@ void CWinHttp::AddHeader(LPCSTR key, LPCSTR value)
 string CWinHttp::Request(LPCSTR lpUrl, HttpRequest type, LPCSTR lpPostData /*= NULL*/, LPCSTR lpHeader/*=NULL*/)
 {
 	string strRet;
-	wstring strUrl = A2U(string(lpUrl));
-	if (!InitConnect(strUrl.c_str(), type, lpPostData, (lpHeader == NULL) ? NULL : A2U(string(lpHeader)).c_str()))
+	wstring strUrl = conversion::A2U(string(lpUrl));
+	if (!InitConnect(strUrl.c_str(), type, lpPostData, (lpHeader == NULL) ? NULL : conversion::A2U(string(lpHeader)).c_str()))
 		return strRet;
 	m_nResponseCode = QueryStatusCode();
 	if (m_nResponseCode == HTTP_STATUS_NOT_FOUND) {
@@ -440,7 +441,7 @@ string CWinHttp::Request(LPCWSTR lpUrl, HttpRequest type, LPCSTR lpPostData /*= 
         //宽字节转窄字节
         std::wstring wstrHeaders = (wchar_t*)lpOutBuffer;
         
-        strRet = U2A(wstrHeaders);
+        strRet = conversion::U2A(wstrHeaders);
       }
 
       wchar_t* pBuffer = (wchar_t*)lpOutBuffer;
@@ -603,7 +604,7 @@ bool CWinHttp::InitConnect(LPCWSTR lpUrl, HttpRequest type, LPCSTR lpPostData/*=
 bool CWinHttp::SendHttpRequest(LPCSTR lpPostData/*=NULL*/, LPCWSTR lpHeader/*=NULL*/)
 {
 	//添加HTTP头
-	std::wstring header = A2U(m_header.toHttpHeaders());
+	std::wstring header = conversion::A2U(m_header.toHttpHeaders());
   /*if (lpHeader != NULL)
   {
     header += lpHeader;

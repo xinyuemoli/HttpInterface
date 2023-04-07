@@ -45,6 +45,9 @@
     <ClCompile Include="httpHeader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="utils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h">
@@ -76,6 +79,9 @@
     </ClInclude>
     <ClInclude Include="httpHeader.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="utils.h">
+      <Filter>WinInet</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
